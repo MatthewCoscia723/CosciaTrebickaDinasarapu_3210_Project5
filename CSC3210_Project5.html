@@ -1,0 +1,72 @@
+<html>
+<head>
+    <title>Three.js Framework Example</title>
+</head>
+<body>
+    
+  <!-- Three.js Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script type="module">
+
+// 1. Initialize the Scene
+const scene = new THREE.Scene();
+
+// 2. Configure the Camera (Perspective Projection)
+// Arguments: Field of View (deg), Aspect Ratio, Near Clipping Plane, Far Clipping Plane
+const camera = new THREE.PerspectiveCamera(
+  35, 
+  window.innerWidth / window.innerHeight, 
+  0.1, 
+  1000
+);
+camera.position.set(0, 0, 3); // Position the camera along the +Z axis
+camera.lookAt(new THREE.Vector3(0, 0, 0));
+scene.add(camera);
+
+// 3. Define Custom Triangle Geometry using BufferGeometry
+function createTriangleMesh() {
+  const geometry = new THREE.BufferGeometry();
+  
+  // Define 3D positions for 3 vertices [x, y, z]
+  const vertices = new Float32Array([
+    -0.5, -0.5,  0.0,  // Vertex 0: Bottom-Left
+     0.5, -0.5,  0.0,  // Vertex 1: Bottom-Right
+     0.0,  0.5,  0.0   // Vertex 2: Top-Center
+  ]);
+
+  // Define per-vertex RGB colors (range 0.0 - 1.0)
+  const colors = new Float32Array([
+    1.0, 0.0, 0.0,  // Red
+    0.0, 1.0, 0.0,  // Green
+    0.0, 0.0, 1.0   // Blue
+  ]);
+
+  // Assign position and color attributes (itemSize = 3 components per vertex)
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  // Create a material that reads interpolated vertex colors
+  const material = new THREE.MeshBasicMaterial({ 
+    vertexColors: true, 
+    side: THREE.DoubleSide 
+  });
+
+  return new THREE.Mesh(geometry, material);
+}
+
+const triangleMesh = createTriangleMesh();
+scene.add(triangleMesh);
+
+// 4. Initialize the WebGL Renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setClearColor(0x111111, 1.0); // Dark grey background
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+// 5. Render the Frame
+renderer.render(scene, camera);
+    </script>
+</body>
+</html>
