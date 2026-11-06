@@ -40,6 +40,15 @@ const noiseScale = 0.03;
 // IMPORTANT: Maximum height of the hills
 const terrainHeight = 8;
 
+// IMPORTANT: Number of noise layers stacked together, where more adds finer detail
+const octaves = 5;
+
+// IMPORTANT: How much each layer's height shrinks compared to the last
+const persistence = 0.5;
+
+// IMPORTANT: How much each layer's detail grows compared to the last
+const lacunarity = 2;
+
 // Light that brightens the scene until sun and moon exist
 const tempLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
 scene.add(tempLight);
@@ -132,6 +141,24 @@ function perlin(x, y) {
   return lerp(bottom, top, v);
 }
 
+// Function that stacks several layers of Perlin noise to create fractal terrain
+function fractalNoise(x , z) {
+  let total = 0;
+  let amplitude = 1;
+  let frequency = 1;
+  let maxTotal = 0; // Sum of every layer's amplitude, used to keep the result between -1 and 1
+
+  // Iterates over every octave, adding a smaller and more detailed layer each time
+  for (let i = 0; i < octaves; i++) {
+    total += perlin(x * frequency, z * frequency) * amplitude;
+    maxTotal += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+
+  return total / maxTotal;
+}
+
 seedNoise();
 
 // Function that builds the terrain mesh and shapes it with Perlin noise
@@ -145,12 +172,12 @@ function createTerrain() {
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i);
     const z = positions.getZ(i);
-    positions.setY(i, perlin(x * noiseScale, z * noiseScale) * terrainHeight);
+    positions.setY(i, fractalNoise(x * noiseScale, z * noiseScale) * terrainHeight);
   }
 
   geometry.computeVertexNormals(); // Recalculates the lighting directions for the new shape
 
-  const material = new THREE.MeshStandardMaterial({color: 0x4a7a3a, wireframe: true}); // Temporary grass green
+  const material = new THREE.MeshStandardMaterial({color: 0x4a7a3a}); // Temporary grass green
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true; // Lets the trees cast shadows onto the terrain
   return mesh;
