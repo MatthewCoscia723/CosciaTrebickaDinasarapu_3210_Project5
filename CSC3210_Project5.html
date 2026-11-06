@@ -24,24 +24,63 @@ const camera = new THREE.PerspectiveCamera(
   0.1, 
   1000
 );
-camera.position.set(0, 5, 10);
+camera.position.set(0, 40, 80);
 camera.lookAt(0, 0, 0);
 scene.add(camera);
 
-// Cube used for testing render loop
-const testCube = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshStandardMaterial({color: 0xff5533})
-);
-scene.add(testCube);
+// IMPORTANT: Width and depth of the square terrain
+const terrainSize = 200;
+
+// IMPORTANT: Number of grid squares along each side, where more is smoother but slower
+const terrainSegments = 200;
+
+// IMPORTANT: How stretched out the hills are, where smaller makes wider hills
+const noiseScale = 0.03;
+
+// IMPORTANT: Maximum height of the hills
+const terrainHeight = 8;
+
+// IMPORTANT: Number of noise layers stacked together, where more adds finer detail
+const octaves = 5;
+
+// IMPORTANT: How much each layer's height shrinks compared to the last
+const persistence = 0.5;
+
+// IMPORTANT: How much each layer's detail grows compared to the last
+const lacunarity = 2;
 
 // Light that brightens the scene until sun and moon exist
 const tempLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
 scene.add(tempLight);
 
-// Function that returns the terrain height at a world position
+// Function that returns the terrain height at a world position by blending the 4 nearest vertices
 function getTerrainHeight(x, z) {
-  return 0; // Placeholder until the terrain exists
+  const positions = terrain.geometry.attributes.position; // Attribute that stores every vertex's current height
+  const cellSize = terrainSize / terrainSegments; // Width of one grid square 
+  const rowLength = terrainSegments + 1; // Number of vertices in each row
+
+  // Converts the world position into grid coordinates, where 0 is the terrain's edge
+  const gridX = (x + terrainSize / 2) / cellSize;
+  const gridZ = (z + terrainSize / 2) / cellSize;
+
+  // Calculates which grid square the point is in, kept inside the terrain
+  const col = THREE.MathUtils.clamp(Math.floor(gridX), 0, terrainSegments - 1);
+  const row = THREE.MathUtils.clamp(Math.floor(gridZ), 0, terrainSegments - 1);
+
+  // Calculates how far across the square the point is, from 0 to 1
+  const fracX = THREE.MathUtils.clamp(gridX - col, 0, 1);
+  const fracZ = THREE.MathUtils.clamp(gridZ - row, 0, 1);
+
+  // Looks up the heights of the square's 4 corner vertices
+  const backLeftHeight = positions.getY(row * rowLength + col);
+  const backRightHeight = positions.getY(row * rowLength + col + 1);
+  const frontLeftHeight = positions.getY((row + 1) * rowLength + col);
+  const frontRightHeight = positions.getY((row + 1) * rowLength + col + 1);
+
+  // Blends the 4 corner heights together, first along x and then along z
+  const back = lerp(backLeftHeight, backRightHeight, fracX);
+  const front = lerp(frontLeftHeight, frontRightHeight, fracX);
+  return lerp(back, front, fracZ);
 }
 
 // Array that stores every tree as {mesh, x, z, radius}
@@ -52,6 +91,126 @@ let currentHit = null;
 
 // Clock that measures the time between frames
 const clock = new THREE.Clock();
+
+// Array that stores the shuffled 0-255 table, doubled so corner lookups never go out of range
+const permutation = [];
+
+// Function that shuffles the permutation table so the terrain is different every reload
+function seedNoise() {
+  const values = []; // Array that stores the number 0-255 before shuffling
+
+  // Fills the array with 0 through 255
+  for (let i = 0; i < 256; i++) {
+    values.push(i);
+  }
+
+  // Iterates backwards through the array, swapping each value with a random one at or before it
+  for (let i = values.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = values[i];
+    values[i] = values[j];
+    values[j] = temp;
+  }
+
+  // Copies the shuffled values twice into the permutation table
+  for (let i = 0; i < 512; i++) {
+    permutation[i] = values[i % 256];
+  }
+}
+
+// Helper function that smooths the blend so cell edges have no visible creases
+function fade(t) {
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+// Helper function that blends between a and b by the amount t
+function lerp(a, b, t) {
+  return a + t * (b - a);
+}
+
+// Helper function that picks one of 4 diagonal directions from the hash and dots it with the offset
+function grad(hash, x, y) {
+  switch (hash % 4) {
+    case 0: return x + y;
+    case 1: return -x + y;
+    case 2: return x - y;
+    default: return -x - y;
+  }
+}
+
+// Function that returns smooth noise between about -1 and 1 for a 2D point
+function perlin(x, y) {
+  // Calculates which grid cell the point is in
+  const cellX = Math.floor(x) & 255; // Wraps the cell into the 0-255 table
+  const cellY = Math.floor(y) & 255;
+
+  // Calculates the point's position inside its cell, from 0 to 1
+  const localX = x - Math.floor(x);
+  const localY = y - Math.floor(y);
+
+  // Calculates the smoothed blend amounts
+  const u = fade(localX);
+  const v = fade(localY);
+  
+  // Looks up a random hash for each of the cell's 4 corners
+  const a = permutation[cellX] + cellY;
+  const b = permutation[cellX + 1] + cellY;
+  const bottomLeft = permutation[a];
+  const topLeft = permutation[a + 1];
+  const bottomRight = permutation[b];
+  const topRight = permutation[b + 1];
+
+  // Blends the 4 corner values together, first along x and then along y
+  const bottom = lerp(grad(bottomLeft, localX, localY), grad(bottomRight, localX - 1, localY), u);
+  const top = lerp(grad(topLeft, localX, localY - 1), grad(topRight, localX - 1, localY - 1), u);
+  return lerp(bottom, top, v);
+}
+
+// Function that stacks several layers of Perlin noise to create fractal terrain
+function fractalNoise(x , z) {
+  let total = 0;
+  let amplitude = 1;
+  let frequency = 1;
+  let maxTotal = 0; // Sum of every layer's amplitude, used to keep the result between -1 and 1
+
+  // Iterates over every octave, adding a smaller and more detailed layer each time
+  for (let i = 0; i < octaves; i++) {
+    total += perlin(x * frequency, z * frequency) * amplitude;
+    maxTotal += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
+
+  return total / maxTotal;
+}
+
+seedNoise();
+
+// Function that builds the terrain mesh and shapes it with Perlin noise
+function createTerrain() {
+  const geometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
+  geometry.rotateX(-Math.PI / 2); // Lays the plane flat so its vertices use x and z
+  
+  const positions = geometry.attributes.position; // Attribute that stores every vertex's x, y, and z
+
+  // Iterates over every vertex, raising it to the noise height at its x and z
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const z = positions.getZ(i);
+    positions.setY(i, fractalNoise(x * noiseScale, z * noiseScale) * terrainHeight);
+  }
+
+  geometry.computeVertexNormals(); // Recalculates the lighting directions for the new shape
+
+  const material = new THREE.MeshStandardMaterial({color: 0x4a7a3a}); // Temporary grass green
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.receiveShadow = true; // Lets the trees cast shadows onto the terrain
+  return mesh;
+}
+
+// Terrain mesh that the player walks on
+const terrain = createTerrain();
+scene.add(terrain);
 
 // Initializes the WebGL Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -75,9 +234,6 @@ function animate() {
   requestAnimationFrame(animate); // Schedules the next frame
   
   const deltaTime = clock.getDelta(); // Time elapsed since the last frame in seconds
-
-  // Spins the test cube at 90 degrees per second
-  testCube.rotation.y += (Math.PI / 2) * deltaTime;
 
   renderer.render(scene, camera);
 }
