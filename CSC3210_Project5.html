@@ -53,9 +53,34 @@ const lacunarity = 2;
 const tempLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
 scene.add(tempLight);
 
-// Function that returns the terrain height at a world position
+// Function that returns the terrain height at a world position by blending the 4 nearest vertices
 function getTerrainHeight(x, z) {
-  return 0; // Placeholder until the terrain exists
+  const positions = terrain.geometry.attributes.position; // Attribute that stores every vertex's current height
+  const cellSize = terrainSize / terrainSegments; // Width of one grid square 
+  const rowLength = terrainSegments + 1; // Number of vertices in each row
+
+  // Converts the world position into grid coordinates, where 0 is the terrain's edge
+  const gridX = (x + terrainSize / 2) / cellSize;
+  const gridZ = (z + terrainSize / 2) / cellSize;
+
+  // Calculates which grid square the point is in, kept inside the terrain
+  const col = THREE.MathUtils.clamp(Math.floor(gridX), 0, terrainSegments - 1);
+  const row = THREE.MathUtils.clamp(Math.floor(gridZ), 0, terrainSegments - 1);
+
+  // Calculates how far across the square the point is, from 0 to 1
+  const fracX = THREE.MathUtils.clamp(gridX - col, 0, 1);
+  const fracZ = THREE.MathUtils.clamp(gridZ - row, 0, 1);
+
+  // Looks up the heights of the square's 4 corner vertices
+  const backLeftHeight = positions.getY(row * rowLength + col);
+  const backRightHeight = positions.getY(row * rowLength + col + 1);
+  const frontLeftHeight = positions.getY((row + 1) * rowLength + col);
+  const frontRightHeight = positions.getY((row + 1) * rowLength + col + 1);
+
+  // Blends the 4 corner heights together, first along x and then along z
+  const back = lerp(backLeftHeight, backRightHeight, fracX);
+  const front = lerp(frontLeftHeight, frontRightHeight, fracX);
+  return lerp(back, front, fracZ);
 }
 
 // Array that stores every tree as {mesh, x, z, radius}
