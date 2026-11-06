@@ -160,6 +160,38 @@ function createTerrain() {
 const terrain = createTerrain();
 scene.add(terrain);
 
+// Raycaster that finds what the center dot is pointing at
+const raycaster = new THREE.Raycaster();
+
+// Screen position the ray is cast through, where (0, 0) is the exact center of the screen
+const rayScreenPosition = new THREE.Vector2(0, 0);
+
+// Function that casts a ray through the center dot and stores the closest thing it hits
+function updateRaycaster() {
+  raycaster.setFromCamera(rayScreenPosition, camera);
+
+  // Collects the terrain and every tree mesh as things the ray can hit
+  const targets = [terrain];
+  for (const tree of treeList) {
+    targets.push(tree.mesh);
+  }
+
+  const hits = raycaster.intersectObjects(targets, true); // True also checks the part inside each tree
+
+  // Keeps only the closest hit, or null when the ray hits nothing
+  if (hits.length > 0) {
+    currentHit = hits[0];
+  } else {
+    currentHit = null;
+  }
+}
+
+// Temporary listener that aims the ray at the mouse until mouse look exists
+window.addEventListener("mousemove", (event) => {
+  rayScreenPosition.x = (event.clientX / window.innerWidth) * 2 - 1; // Converts pixels to -1 (left) through 1 (right)
+  rayScreenPosition.y = -(event.clientY / window.innerHeight) * 2 + 1; // Converts pixels to 1 (top) through -1 (bottom)
+});
+
 // Initializes the WebGL Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -182,6 +214,8 @@ function animate() {
   requestAnimationFrame(animate); // Schedules the next frame
   
   const deltaTime = clock.getDelta(); // Time elapsed since the last frame in seconds
+
+  updateRaycaster();
 
   renderer.render(scene, camera);
 }
