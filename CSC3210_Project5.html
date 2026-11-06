@@ -68,6 +68,12 @@ const highlightRadius = 2;
 // IMPORTANT: Number of grid squares across the highlight patch, where more drapes more closely over bumps
 const highlightSegments = 24;
 
+// IMPORTANT: Radius of the hole dug with each click, matching the highlight so the highlighted area is what gets dug
+const digRadius = highlightRadius;
+
+// IMPORTANT: How fast the center of the hole gets deeper while the mouse is held, in units per second
+const digSpeed = 2;
+
 // Light that brightens the scene until sun and moon exist
 const tempLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
 scene.add(tempLight);
@@ -107,6 +113,9 @@ const treeList = [];
 
 // Object that stores what the center dot's ray is hitting
 let currentHit = null;
+
+// Whether the left mouse button is currently held down for digging
+let isDigging = false;
 
 // Clock that measures the time between frames
 const clock = new THREE.Clock();
@@ -255,6 +264,46 @@ function updateHighlight() {
   highlightPatch.position.set(centerX, 0, centerZ);
 }
 
+// Function that digs a smooth bowl-shaped hole in the terrain around a point
+function digHole(point, amount) {
+  const positions = terrain.geometry.attributes.position; // Attribute that stores every vertex's x, y, and z
+
+  // Iterates over every vertex in the terrain, lowering the ones inside the dig radius
+  for (let i = 0; i < positions.count; i++) {
+    const dx = positions.getX(i) - point.x;
+    const dz = positions.getZ(i) - point.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+
+    // Skips vertices outside the hole
+    if (distance > digRadius) {
+      continue;
+    }
+
+    // Calculates 1 at the center of the hole down to 0 at its edge, curved so the sides slope smoothly
+    const falloff = (Math.cos((distance / digRadius) * Math.PI) + 1) / 2;
+    positions.setY(i, positions.getY(i) - amount * falloff);
+  }
+
+  positions.needsUpdate = true; // Tells Three.js to send the new heights to the GPU
+  terrain.geometry.computeVertexNormals(); // Recalculates the lighting so the hole's sides are shaded
+  terrain.geometry.computeBoundingSphere(); // Updates the bounds the raycaster uses to find the terrain
+}
+
+// Listener that starts digging when the left mouse button is pressed
+window.addEventListener("mousedown", (event) => {
+  if (event.button === 0) {
+    isDigging = true;
+  }
+});
+
+// Listener that stops digging when the left mouse button is released
+window.addEventListener("mouseup", (event) => {
+  if (event.button === 0) {
+    isDigging = false;
+  }
+});
+
+
 // Initializes the WebGL Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -279,6 +328,11 @@ function animate() {
   const deltaTime = clock.getDelta(); // Time elapsed since the last frame in seconds
 
   updateRaycaster();
+
+  // Digs a little deeper every frame while the mouse is held on the terrain
+  if (isDigging && currentHit && currentHit.object === terrain) {
+    digHole(currentHit.point, digSpeed * deltaTime);
+  }
 
   updateHighlight();
 
