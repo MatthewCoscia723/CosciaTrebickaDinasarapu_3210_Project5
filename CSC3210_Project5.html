@@ -62,6 +62,12 @@ grassTexture.wrapS = THREE.RepeatWrapping; // Repeats the image horizontally ins
 grassTexture.wrapT = THREE.RepeatWrapping; // Repeats the image vertically
 grassTexture.repeat.set(grassRepeat, grassRepeat);
 
+// IMPORTANT: Radius of the highlighted circle under the center dot
+const highlightRadius = 2;
+
+// IMPORTANT: Number of grid squares across the highlight patch, where more drapes more closely over bumps
+const highlightSegments = 24;
+
 // Light that brightens the scene until sun and moon exist
 const tempLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
 scene.add(tempLight);
@@ -192,6 +198,63 @@ window.addEventListener("mousemove", (event) => {
   rayScreenPosition.y = -(event.clientY / window.innerHeight) * 2 + 1; // Converts pixels to 1 (top) through -1 (bottom)
 });
 
+// Function that draws a soft glowing circle onto a canvas to use as the highlight's texture
+function createHighlightTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+
+  // Fades from yellow in the middle to fully transparent at the edge
+  const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gradient.addColorStop(0, "rgba(255, 230, 80, 0.2)");
+  gradient.addColorStop(0.7, "rgba(255, 230, 80, 0.15)");
+  gradient.addColorStop(1, "rgba(255, 230, 80, 0)");
+
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(canvas);
+}
+
+// Patch that drapes over the terrain under the center dot
+const highlightPatch = new THREE.Mesh(
+  new THREE.PlaneGeometry(highlightRadius * 2, highlightRadius * 2, highlightSegments, highlightSegments).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({
+    map: createHighlightTexture(),
+    transparent: true, // Lets the faded edge show the grass underneath
+    depthWrite: false, // Keeps the see-through patch from hiding things behind it
+    polygonOffset: true, // Draws the patch slightly in front of the terrain so they don't flicker
+    polygonOffsetFactor: -4
+  })
+);
+highlightPatch.visible = false;
+highlightPatch.frustumCulled = false; // Keeps Three.js from wrongly skipping the patch after its shape changes
+scene.add(highlightPatch);
+
+// Function that moves the highlight patch to the hit point and bends it to match the ground
+function updateHighlight() {
+  // Hides the patch when the ray isn't on the terrain
+  if (!currentHit || currentHit.object !== terrain) {
+    highlightPatch.visible = false;
+    return;
+  }
+
+  highlightPatch.visible = true;
+  const centerX = currentHit.point.x;
+  const centerZ = currentHit.point.z;
+  const positions = highlightPatch.geometry.attributes.position; // Attribute that stores the patch's vertices
+
+  // Iterates over every vertex in the patch, setting its height to the ground below it
+  for (let i = 0; i < positions.count; i++) {
+    const worldX = centerX + positions.getX(i);
+    const worldZ = centerZ + positions.getZ(i);
+    positions.setY(i, getTerrainHeight(worldX, worldZ) + 0.05); // Lifts it slightly so it sits on top of the grass
+  }
+  positions.needsUpdate = true; // Tells Three.js to send the new heights to the GPU
+
+  highlightPatch.position.set(centerX, 0, centerZ);
+}
+
 // Initializes the WebGL Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -216,6 +279,8 @@ function animate() {
   const deltaTime = clock.getDelta(); // Time elapsed since the last frame in seconds
 
   updateRaycaster();
+
+  updateHighlight();
 
   renderer.render(scene, camera);
 }
