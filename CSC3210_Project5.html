@@ -50,6 +50,18 @@ const persistence = 0.5;
 // IMPORTANT: How much each layer's detail grows compared to the last
 const lacunarity = 2;
 
+// IMPORTANT: How many times the grass texture repeats across the terrain, where higher makes smaller grass detail
+const grassRepeat = 40;
+
+// Loader that turns image files into textures
+const textureLoader = new THREE.TextureLoader();
+
+// Grass texture tiled across the whole terrain
+const grassTexture = textureLoader.load("assets/grass.jpg");
+grassTexture.wrapS = THREE.RepeatWrapping; // Repeats the image horizontally instead of stretching it
+grassTexture.wrapT = THREE.RepeatWrapping; // Repeats the image vertically
+grassTexture.repeat.set(grassRepeat, grassRepeat);
+
 // Light that brightens the scene until sun and moon exist
 const tempLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
 scene.add(tempLight);
@@ -138,7 +150,7 @@ function createTerrain() {
 
   geometry.computeVertexNormals(); // Recalculates the lighting directions for the new shape
 
-  const material = new THREE.MeshStandardMaterial({color: 0x4a7a3a}); // Temporary grass green
+  const material = new THREE.MeshStandardMaterial({map: grassTexture}); // Grass texture on the standard material so lighting and shadows still work
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true; // Lets the trees cast shadows onto the terrain
   return mesh;
