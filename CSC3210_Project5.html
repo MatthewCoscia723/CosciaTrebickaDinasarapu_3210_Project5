@@ -256,13 +256,29 @@ function createTerrain() {
 const terrain = createTerrain();
 scene.add(terrain);
 
-// TEST FOR TREE
-const instructions = LSystem("F", {F: "F[+F]F[-F]F"}, 2);
-const testTree = createTree(instructions, 1.75, Math.PI / 6);
-testTree.scale.set(1.5, 1.5, 1.5);
-testTree.position.set(0, getTerrainHeight(0, 0), 0);
-scene.add(testTree);
-treeList.push({mesh: testTree, x: 0, z: 0, radius: 1});
+// Tree Grammars
+// tree 1: deterministic (same each time)
+const tree1Instructions = LSystem("F", {F: "F[+F]F[-F]F"}, 2);
+
+// tree 2 & 3: random
+const tree2Instructions = LSystem("F", {F: ["F[+F]F", "F[-F]F"]}, 2);
+const tree3Instructions = LSystem("F", {F: ["FF[+F][-F]", "F[+FF]F[-F]"]}, 2);
+
+// tree tests
+const testTree1 = createTree(tree1Instructions, 1.75, Math.PI / 6);
+const testTree2 = createTree(tree2Instructions, 1.75, Math.PI / 5);
+const testTree3 = createTree(tree3Instructions, 1.75, Math.PI / 4);
+testTree1.position.set(-5, getTerrainHeight(-5, 0), 0);
+testTree2.position.set(0, getTerrainHeight(0, 0), 0);
+testTree3.position.set(5, getTerrainHeight(5, 0), 0);
+testTree1.scale.set(1.5, 1.5, 1.5);
+testTree2.scale.set(1.5, 1.5, 1.5);
+testTree3.scale.set(1.5, 1.5, 1.5);
+
+scene.add(testTree1);
+scene.add(testTree2);
+scene.add(testTree3);
+
 
 // Raycaster that finds what the center dot is pointing at
 const raycaster = new THREE.Raycaster();
