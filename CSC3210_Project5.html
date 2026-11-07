@@ -62,6 +62,9 @@ grassTexture.wrapS = THREE.RepeatWrapping; // Repeats the image horizontally ins
 grassTexture.wrapT = THREE.RepeatWrapping; // Repeats the image vertically
 grassTexture.repeat.set(grassRepeat, grassRepeat);
 
+// Tree bark texturing
+const barkTexture = textureLoader.load("assets/treeBark.jpg");
+
 // IMPORTANT: Radius of the highlighted circle under the center dot
 const highlightRadius = 2;
 
@@ -113,6 +116,9 @@ const treeList = [];
 
 // Object that stores what the center dot's ray is hitting
 let currentHit = null;
+
+// Remembers which tree is highlighted
+let highlightedTree = null;
 
 // Whether the left mouse button is currently held down for digging
 let isDigging = false;
@@ -172,7 +178,7 @@ function createTree(instructions, branchLength, branchAngle) {
 
   // Shared "roots" of the tree for all branches
   const branchGeometry = new THREE.CylinderGeometry(0.10, 0.13, branchLength, 5);
-  const branchMaterial = new THREE.MeshBasicMaterial({color: 0x654321});
+  const branchMaterial = new THREE.MeshStandardMaterial({map: barkTexture, color: 0x888888});
 
   // values for current positions/directions
   let x = 0;
@@ -354,6 +360,41 @@ function updateRaycaster() {
     currentHit = hits[0];
   } else {
     currentHit = null;
+  }
+
+  let hitTree = null;
+
+  // check if rays hit something in a group. searches through all trees and checks if the ray hits the tree
+  if (currentHit && currentHit.object.parent) {
+    for (const tree of treeList) {
+      if (tree.mesh === currentHit.object.parent) {
+        hitTree = tree.mesh;
+        // stop searching if the tree was found
+        break;
+      }
+    }
+  }
+
+  // If it's not a highlighted tree, make the tree normal looking
+  if (highlightedTree != hitTree) {
+    if (highlightedTree) {
+      for (const branch of highlightedTree.children) {
+        branch.material.map = barkTexture;
+        branch.material.color.set(0x888888);
+        branch.material.needsUpdate = true;
+      }
+    }
+
+    highlightedTree = hitTree;
+
+    // If its a highlighted tree, update color and material
+    if (highlightedTree) {
+      for (const branch of highlightedTree.children) {
+        branch.material.map = null;
+        branch.material.color.set(0xaaaa00);
+        branch.material.needsUpdate = true;
+      }
+    }
   }
 }
 
