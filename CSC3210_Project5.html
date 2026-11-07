@@ -131,6 +131,87 @@ function lerp(a, b, t) {
   return a + t * (b - a);
 }
 
+function LSystem(axiom, rules, iterations) {
+  let result = axiom;
+
+  for (let i = 0; i < iterations; i++) {
+    let next = "";
+
+    for (let j = 0; j < result.length; j++) {
+      const symbol = result[j];
+
+      if (rules[symbol] !== undefined) {
+
+        if (Array.isArray(rules[symbol])) {
+          let choices = rules[symbol];
+          let randomIndex = Math.floor(Math.random() * choices.length);
+          next += choices[randomIndex];
+        } 
+        else {
+          next += rules[symbol];
+        }
+      } else {
+        next += symbol;
+      }
+    }
+    result = next;
+  }
+  return result;
+}
+
+function createTree(instructions, branchLength, branchAngle) {
+  const tree = new THREE.Group();
+
+  const branchGeometry = new THREE.CylinderGeometry(0.10, 0.13, branchLength, 5);
+  const branchMaterial = new THREE.MeshBasicMaterial({color: 0x654321});
+
+  let x = 0;
+  let y = 0;
+  let angle = 0;
+  const stack = [];
+
+  for (let i = 0; i < instructions.length; i++) {
+    const symbol = instructions[i];
+
+    if (symbol === "F") {
+      const endX = x + Math.sin(angle) * branchLength;
+      const endY = y + Math.cos(angle) * branchLength;
+
+      const branch = new THREE.Mesh(branchGeometry, branchMaterial);
+
+      branch.position.set((x + endX) / 2, (y + endY) / 2, 0);
+      branch.rotation.z = -angle;
+      branch.castShadow = true;
+
+      tree.add(branch);
+      
+      x = endX;
+      y = endY;
+    }
+
+    else if (symbol === "+") {
+      angle += branchAngle;
+    }
+    else if (symbol === "-") {
+      angle -= branchAngle;
+    }
+
+    else if (symbol === "[") {
+      stack.push([x, y, angle]);
+    }
+    else if (symbol === "]") {
+      const saved = stack.pop();
+
+      if (saved) {
+        x = saved[0];
+        y = saved[1];
+        angle = saved[2];
+      }
+    }
+  }
+  return tree;
+}
+
 // Function that stacks several layers of Perlin noise to create fractal terrain
 function fractalNoise(x , z) {
   let total = 0;
@@ -174,6 +255,14 @@ function createTerrain() {
 // Terrain mesh that the player walks on
 const terrain = createTerrain();
 scene.add(terrain);
+
+// TEST FOR TREE
+const instructions = LSystem("F", {F: "F[+F]F[-F]F"}, 2);
+const testTree = createTree(instructions, 1.75, Math.PI / 6);
+testTree.scale.set(1.5, 1.5, 1.5);
+testTree.position.set(0, getTerrainHeight(0, 0), 0);
+scene.add(testTree);
+treeList.push({mesh: testTree, x: 0, z: 0, radius: 1});
 
 // Raycaster that finds what the center dot is pointing at
 const raycaster = new THREE.Raycaster();
