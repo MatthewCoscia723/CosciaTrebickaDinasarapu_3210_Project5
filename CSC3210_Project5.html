@@ -131,6 +131,109 @@ function lerp(a, b, t) {
   return a + t * (b - a);
 }
 
+// An L system that generates instructions by applying rules
+function LSystem(axiom, rules, iterations) {
+  let result = axiom; // start with the initial axiom
+
+  // repeat grammar rules for a certain number of iterations
+  for (let i = 0; i < iterations; i++) {
+    let next = "";
+
+    // check every symbol in the current rules
+    for (let j = 0; j < result.length; j++) {
+      const symbol = result[j];
+
+      // makes sure all of the symbols have a corresponding rule
+      if (rules[symbol] !== undefined) {
+
+        // randomly chooses a rule replacement if theres multiple options (for randomness)
+        if (Array.isArray(rules[symbol])) {
+          let choices = rules[symbol];
+          let randomIndex = Math.floor(Math.random() * choices.length);
+          next += choices[randomIndex];
+        } 
+        // otherwise, it's deterministic
+        else {
+          next += rules[symbol];
+        }
+      } else {
+        next += symbol;
+      }
+    }
+    // saves new instructions for next iteration
+    result = next;
+  }
+  return result; // returns completed tree instructions
+}
+
+// Creates a tree for a given set of grammar rules, how long each branch should be, and the angle it should cut-off from.
+function createTree(instructions, branchLength, branchAngle) {
+  const tree = new THREE.Group();
+
+  // Shared "roots" of the tree for all branches
+  const branchGeometry = new THREE.CylinderGeometry(0.10, 0.13, branchLength, 5);
+  const branchMaterial = new THREE.MeshBasicMaterial({color: 0x654321});
+
+  // values for current positions/directions
+  let x = 0;
+  let y = 0;
+  let angle = 0;
+  const stack = []; // stores branch positions and angles to go back for branching
+
+  // reads each symbol in the grammar rules
+  for (let i = 0; i < instructions.length; i++) {
+    const symbol = instructions[i];
+
+    // when the instruction is an F, create a branch
+    if (symbol === "F") {
+      
+      // calculate branch end positions
+      const endX = x + Math.sin(angle) * branchLength;
+      const endY = y + Math.cos(angle) * branchLength;
+
+      const branch = new THREE.Mesh(branchGeometry, branchMaterial);
+
+      // place the branch in the correct positions
+      branch.position.set((x + endX) / 2, (y + endY) / 2, 0);
+      branch.rotation.z = -angle;
+      branch.castShadow = true;
+
+      // add branch to the group
+      tree.add(branch);
+      
+      x = endX;
+      y = endY;
+    }
+
+    // if the symbol is a +, branch right
+    else if (symbol === "+") {
+      angle += branchAngle;
+    }
+
+    // if the symbol is a -, branch left
+    else if (symbol === "-") {
+      angle -= branchAngle;
+    }
+
+    // if the symbol is a [, save the data before branching
+    else if (symbol === "[") {
+      stack.push([x, y, angle]);
+    }
+    
+    // if the symbol is a ], return the stored data
+    else if (symbol === "]") {
+      const saved = stack.pop();
+
+      if (saved) {
+        x = saved[0];
+        y = saved[1];
+        angle = saved[2];
+      }
+    }
+  }
+  return tree; // return the completed tree
+}
+
 // Function that stacks several layers of Perlin noise to create fractal terrain
 function fractalNoise(x , z) {
   let total = 0;
@@ -174,6 +277,59 @@ function createTerrain() {
 // Terrain mesh that the player walks on
 const terrain = createTerrain();
 scene.add(terrain);
+
+// Tree Grammars
+// Tree 1: deterministic (same each time)
+const tree1Rules = {F: "F[+F]F[-F]F"};
+
+// Tree 2 & 3: random
+const tree2Rules = {F: ["F[+F]F", "F[-F]F"]};
+const tree3Rules = {F: ["FF[+F][-F]", "F[+FF]F[-F]"]};
+
+// Spawn 100 of tree1 (deterministic ones)
+for (let i = 0; i < 100; i++) {
+  const instructions = LSystem("F", tree1Rules, 2);
+  const tree = createTree(instructions, 1.75, Math.PI / 6);
+
+  // x and y coordinates to spawn them in
+  const x = Math.random() * 180 - 90;
+  const z = Math.random() * 180 - 90;
+
+  // scale the trees and place them
+  tree.scale.set(1.5, 1.5, 1.5);
+  tree.position.set(x, getTerrainHeight(x, z), z);
+  scene.add(tree);
+  treeList.push({mesh: tree, x: x, z: z, radius: 1});
+}
+
+// Spawn 100 of tree2 (same backbone as above)
+for (let i = 0; i < 100; i++) {
+  const instructions = LSystem("F", tree2Rules, 2);
+  const tree = createTree(instructions, 1.75, Math.PI / 5);
+
+  const x = Math.random() * 180 - 90;
+  const z = Math.random() * 180 - 90;
+
+  tree.scale.set(1.5, 1.5, 1.5);
+  tree.position.set(x, getTerrainHeight(x, z), z);
+  scene.add(tree);
+  treeList.push({mesh: tree, x: x, z: z, radius: 1});
+}
+
+// Spawn 100 (same backbone as above)
+for (let i = 0; i < 100; i++) {
+  const instructions = LSystem("F", tree3Rules, 2);
+  const tree = createTree(instructions, 1.75, Math.PI / 4);
+
+  const x = Math.random() * 180 - 90;
+  const z = Math.random() * 180 - 90;
+
+  tree.scale.set(1.5, 1.5, 1.5);
+  tree.position.set(x, getTerrainHeight(x, z), z);
+  scene.add(tree);
+  treeList.push({mesh: tree, x: x, z: z, radius: 1});
+}
+
 
 // Raycaster that finds what the center dot is pointing at
 const raycaster = new THREE.Raycaster();
