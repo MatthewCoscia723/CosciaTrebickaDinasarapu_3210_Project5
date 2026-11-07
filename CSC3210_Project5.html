@@ -325,7 +325,7 @@ for (let i = 0; i < 100; i++) {
   tree.scale.set(1.5, 1.5, 1.5);
   tree.position.set(x, getTerrainHeight(x, z), z);
   scene.add(tree);
-  treeList.push({mesh: tree, x: x, z: z, radius: 1});
+  treeList.push({mesh: tree, x: x, z: z, radius: 1, shrunk: false, shrinking: false, shrinkTime: 0});
 }
 
 // Spawn 100 of tree2 (same backbone as above)
@@ -339,7 +339,7 @@ for (let i = 0; i < 100; i++) {
   tree.scale.set(1.5, 1.5, 1.5);
   tree.position.set(x, getTerrainHeight(x, z), z);
   scene.add(tree);
-  treeList.push({mesh: tree, x: x, z: z, radius: 1});
+  treeList.push({mesh: tree, x: x, z: z, radius: 1, shrunk: false, shrinking: false, shrinkTime: 0});
 }
 
 // Spawn 100 (same backbone as above)
@@ -353,7 +353,7 @@ for (let i = 0; i < 100; i++) {
   tree.scale.set(1.5, 1.5, 1.5);
   tree.position.set(x, getTerrainHeight(x, z), z);
   scene.add(tree);
-  treeList.push({mesh: tree, x: x, z: z, radius: 1});
+  treeList.push({mesh: tree, x: x, z: z, radius: 1, shrunk: false, shrinking: false, shrinkTime: 0});
 }
 
 
@@ -426,6 +426,17 @@ function updateRaycaster() {
 window.addEventListener("mousemove", (event) => {
   rayScreenPosition.x = (event.clientX / window.innerWidth) * 2 - 1; // Converts pixels to -1 (left) through 1 (right)
   rayScreenPosition.y = -(event.clientY / window.innerHeight) * 2 + 1; // Converts pixels to 1 (top) through -1 (bottom)
+});
+
+// When there is a click on a highlighted tree and its not already shrunk, prepare to shrink it.
+window.addEventListener("click", () => {
+  for (const tree of treeList) {
+    if (tree.mesh === highlightedTree && !tree.shrunk) {
+      tree.shrunk = true;
+      tree.shrinking = true;
+      break;
+    }
+  }
 });
 
 // Function that draws a soft glowing circle onto a canvas to use as the highlight's texture
@@ -547,6 +558,22 @@ function animate() {
   requestAnimationFrame(animate); // Schedules the next frame
   
   const deltaTime = clock.getDelta(); // Time elapsed since the last frame in seconds
+
+  // for each tree, if its shrinking, gradually shrink it
+  for (const tree of treeList) {
+    if (tree.shrinking) {
+      tree.shrinkTime += deltaTime;
+      // controls shrink speed
+      let shrinkProgress = Math.min(tree.shrinkTime / 0.75, 1);
+      // controls shrink size
+      let scale = 1.5 - (0.60 * shrinkProgress);
+      tree.mesh.scale.set(scale, scale, scale);
+
+      if (shrinkProgress >= 1) {
+        tree.shrinking = false;
+      }
+    }
+  }
 
   updateRaycaster();
 
