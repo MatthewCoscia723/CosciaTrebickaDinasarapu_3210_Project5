@@ -65,6 +65,14 @@ grassTexture.repeat.set(grassRepeat, grassRepeat);
 // Tree bark texturing
 const barkTexture = textureLoader.load("assets/treeBark.jpg");
 
+const leafGeometry = new THREE.SphereGeometry(0.6, 6, 5);
+const leafMaterials = [
+  new THREE.MeshStandardMaterial({color: 0x276235}),
+  new THREE.MeshStandardMaterial({color: 0x71AA34}),
+  new THREE.MeshStandardMaterial({color: 0x6F9940}),
+  new THREE.MeshStandardMaterial({color: 0xA9E79B})
+    ];
+
 // IMPORTANT: Radius of the highlighted circle under the center dot
 const highlightRadius = 2;
 
@@ -198,6 +206,7 @@ function createTree(instructions, branchLength, branchAngle) {
       const endY = y + Math.cos(angle) * branchLength;
 
       const branch = new THREE.Mesh(branchGeometry, branchMaterial);
+      branch.userData.isBranch = true;
 
       // place the branch in the correct positions
       branch.position.set((x + endX) / 2, (y + endY) / 2, 0);
@@ -207,6 +216,17 @@ function createTree(instructions, branchLength, branchAngle) {
       // add branch to the group
       tree.add(branch);
       
+      // add leaves to the end of a branch
+      if (instructions[i + 1] === "]" || i === instructions.length - 1) {
+        for (let j = 0; j < 1; j++) {
+          const leaves = new THREE.Mesh(leafGeometry, leafMaterials[Math.floor(Math.random() * leafMaterials.length)]);
+          const size = 0.6 + Math.random() * 0.5;
+          leaves.scale.set(size, size, size);
+
+          leaves.position.set(endX + (Math.random() - 0.5) * 0.8, endY + (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8);
+          tree.add(leaves);
+        }
+      }
       x = endX;
       y = endY;
     }
@@ -379,9 +399,11 @@ function updateRaycaster() {
   if (highlightedTree != hitTree) {
     if (highlightedTree) {
       for (const branch of highlightedTree.children) {
-        branch.material.map = barkTexture;
-        branch.material.color.set(0x888888);
-        branch.material.needsUpdate = true;
+        if (branch.userData.isBranch) {
+          branch.material.map = barkTexture;
+          branch.material.color.set(0x888888);
+          branch.material.needsUpdate = true;
+        }
       }
     }
 
@@ -390,9 +412,11 @@ function updateRaycaster() {
     // If its a highlighted tree, update color and material
     if (highlightedTree) {
       for (const branch of highlightedTree.children) {
-        branch.material.map = null;
-        branch.material.color.set(0xaaaa00);
-        branch.material.needsUpdate = true;
+        if (branch.userData.isBranch) {
+          branch.material.map = null;
+          branch.material.color.set(0xaaaa00);
+          branch.material.needsUpdate = true;
+        }
       }
     }
   }
