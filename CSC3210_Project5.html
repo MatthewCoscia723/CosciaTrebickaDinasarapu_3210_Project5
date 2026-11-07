@@ -286,11 +286,11 @@ scene.add(terrain);
 
 // Tree Grammars
 // Tree 1: deterministic (same each time)
-const tree1Rules = {F: "F[+F]F[-F]F"};
+const tree1Rules = {F: "F[+F]F[-F][+F]F"};
 
 // Tree 2 & 3: random
-const tree2Rules = {F: ["F[+F]F", "F[-F]F"]};
-const tree3Rules = {F: ["FF[+F][-F]", "F[+FF]F[-F]"]};
+const tree2Rules = {F: ["F[+F]F[-F]", "F[-F]F[+F]"]};
+const tree3Rules = {F: ["FF[+F][-F][+F]", "F[+FF][-F]F[+F]"]};
 
 // Spawn 100 of tree1 (deterministic ones)
 for (let i = 0; i < 100; i++) {
