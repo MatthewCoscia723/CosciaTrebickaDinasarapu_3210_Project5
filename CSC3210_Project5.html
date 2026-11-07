@@ -65,12 +65,15 @@ grassTexture.repeat.set(grassRepeat, grassRepeat);
 // Tree bark texturing
 const barkTexture = textureLoader.load("assets/treeBark.jpg");
 
+// Tree leaf texturing
+const leafTexture = textureLoader.load("assets/treeLeaves.jpg");
+
 const leafGeometry = new THREE.SphereGeometry(0.6, 6, 5);
 const leafMaterials = [
-  new THREE.MeshStandardMaterial({color: 0x276235}),
-  new THREE.MeshStandardMaterial({color: 0x71AA34}),
-  new THREE.MeshStandardMaterial({color: 0x6F9940}),
-  new THREE.MeshStandardMaterial({color: 0xA9E79B})
+  new THREE.MeshStandardMaterial({map: leafTexture, color: 0x276235, side: THREE.DoubleSide}),
+  new THREE.MeshStandardMaterial({map: leafTexture, color: 0x71AA34, side: THREE.DoubleSide}),
+  new THREE.MeshStandardMaterial({map: leafTexture, color: 0x6F9940, side: THREE.DoubleSide}),
+  new THREE.MeshStandardMaterial({map: leafTexture, color: 0xA9E79B, side: THREE.DoubleSide})
     ];
 
 // IMPORTANT: Radius of the highlighted circle under the center dot
