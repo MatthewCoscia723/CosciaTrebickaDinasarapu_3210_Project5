@@ -29,7 +29,7 @@
 
 // Initializes the Scene
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb); // Temporary sky blue
+scene.background = new THREE.Color(0x87ceeb); // Initial daytime sky color.
 
 // Configures the Camera (Perspective Projection)
 // Arguments: Field of View (deg), Aspect Ratio, Near Clipping Plane, Far Clipping Plane
@@ -101,9 +101,17 @@ const digRadius = highlightRadius;
 // IMPORTANT: How fast the center of the hole gets deeper while the mouse is held, in units per second
 const digSpeed = 2;
 
-// Light that brightens the scene until sun and moon exist
-const tempLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
-scene.add(tempLight);
+const sunLight = new THREE.DirectionalLight(0xffe8b0, 1.0);
+scene.add(sunLight);
+
+const moonLight = new THREE.DirectionalLight(0xb7c9ff, 0.35);
+scene.add(moonLight);
+
+const twilightSkyColor = new THREE.Color(0xd97a5f);
+const nightSkyColor = new THREE.Color(0x0b1026);
+const daySkyColor = new THREE.Color(0x87ceeb);
+const sunsetColor = new THREE.Color(0xff7a33);
+const dayLightColor = new THREE.Color(0xffe8b0);
 
 // Function that returns the terrain height at a world position by blending the 4 nearest vertices
 function getTerrainHeight(x, z) {
@@ -149,6 +157,10 @@ let isDigging = false;
 
 // Clock that measures the time between frames
 const clock = new THREE.Clock();
+
+let orbitAngle = 0;
+const orbitSpeed = THREE.MathUtils.degToRad(1.5);
+const orbitRadius = 120;
 
 // Three.js's built in Perlin noise generator
 const noiseGenerator = new THREE.ImprovedNoise();
@@ -588,7 +600,7 @@ renderer.domElement.addEventListener("click", function() {
 
 document.addEventListener("mousemove", function(event) {
   if (document.pointerLockElement === renderer.domElement) {
-    yaw += event.movementX * mouseSensitivity;
+    yaw -= event.movementX * mouseSensitivity;
     pitch -= event.movementY * mouseSensitivity;
 
     pitch = THREE.MathUtils.clamp(pitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
@@ -643,6 +655,60 @@ function animate() {
   requestAnimationFrame(animate); // Schedules the next frame
   
   const deltaTime = clock.getDelta(); // Time elapsed since the last frame in seconds
+  orbitAngle += orbitSpeed * deltaTime;
+
+  sunLight.position.set(
+    Math.cos(orbitAngle) * orbitRadius,
+    Math.sin(orbitAngle) * orbitRadius,
+    0
+  );
+
+  const moonAngle = orbitAngle + Math.PI; // Moon is opposite the sun
+
+  moonLight.position.set(
+    Math.cos(moonAngle) * orbitRadius,
+    Math.sin(moonAngle) * orbitRadius,
+    0
+  );
+
+  const sunHeight = sunLight.position.y;
+
+  if (sunHeight > 0) {
+    moonLight.intensity = 0;
+
+    if (sunHeight < 25) {
+      const colorBlend = sunHeight / 25;
+
+      sunLight.intensity = colorBlend;
+
+      if (colorBlend < 0.5) {
+        const twilightBlend = colorBlend * 2;
+
+        scene.background.copy(nightSkyColor).lerp(twilightSkyColor, twilightBlend);
+
+      } else {
+        const dayBlend = (colorBlend - 0.5) * 2;
+
+        scene.background.copy(twilightSkyColor).lerp(daySkyColor, dayBlend);
+      }
+
+      sunLight.color.copy(sunsetColor).lerp(dayLightColor, colorBlend);
+
+    } else {
+      sunLight.intensity = 1.0;
+      scene.background.set(0x87ceeb); // Set the background to a sky blue color
+      sunLight.color.set(0xffe8b0); // Set the sun light color to a warm yellowish color
+    }
+
+  } else {
+    scene.background.set(0x0b1026); // Set the background to a dark night color
+
+    sunLight.intensity = 0;
+
+    const moonBlend = THREE.MathUtils.clamp((-sunHeight) / 25, 0, 1);
+    moonLight.intensity = 0.40 * moonBlend;
+  }
+
   // Calculates the distance the player moves this frame
   const movementAmount = movementSpeed * deltaTime;
 
