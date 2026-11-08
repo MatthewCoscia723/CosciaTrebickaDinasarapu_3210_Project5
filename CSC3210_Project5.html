@@ -102,9 +102,24 @@ const digRadius = highlightRadius;
 const digSpeed = 2;
 
 const sunLight = new THREE.DirectionalLight(0xffe8b0, 1.0);
+sunLight.castShadow = true;
+
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+
+sunLight.shadow.camera.left = -25;
+sunLight.shadow.camera.right = 25;
+sunLight.shadow.camera.top = 25;
+sunLight.shadow.camera.bottom = -25;
+
+sunLight.shadow.camera.near = 1;
+sunLight.shadow.camera.far = 250;
+
+scene.add(sunLight.target);
 scene.add(sunLight);
 
 const moonLight = new THREE.DirectionalLight(0xb7c9ff, 0.35);
+scene.add(moonLight.target);
 scene.add(moonLight);
 
 const twilightSkyColor = new THREE.Color(0xd97a5f);
@@ -248,6 +263,7 @@ function createTree(instructions, branchLength, branchAngle) {
       if (instructions[i + 1] === "]" || i === instructions.length - 1) {
         for (let j = 0; j < 1; j++) {
           const leaves = new THREE.Mesh(leafGeometry, leafMaterials[Math.floor(Math.random() * leafMaterials.length)]);
+          leaves.castShadow = true;
           const size = 0.6 + Math.random() * 0.5;
           leaves.scale.set(size, size, size);
 
@@ -325,6 +341,7 @@ function createTerrain() {
   const material = new THREE.MeshStandardMaterial({map: grassTexture}); // Grass texture on the standard material so lighting and shadows still work
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true; // Lets the trees cast shadows onto the terrain
+  mesh.castShadow = false;
   return mesh;
 }
 
@@ -658,17 +675,30 @@ function animate() {
   orbitAngle += orbitSpeed * deltaTime;
 
   sunLight.position.set(
-    Math.cos(orbitAngle) * orbitRadius,
+    camera.position.x + Math.cos(orbitAngle) * orbitRadius,
     Math.sin(orbitAngle) * orbitRadius,
-    0
+    camera.position.z
   );
 
   const moonAngle = orbitAngle + Math.PI; // Moon is opposite the sun
 
   moonLight.position.set(
-    Math.cos(moonAngle) * orbitRadius,
+    camera.position.x + Math.cos(moonAngle) * orbitRadius,
     Math.sin(moonAngle) * orbitRadius,
-    0
+    camera.position.z
+  );
+
+  // Move the sun and moon targets to follow the player
+  sunLight.target.position.set(
+    camera.position.x,
+    getTerrainHeight(camera.position.x, camera.position.z),
+    camera.position.z
+  );
+
+  moonLight.target.position.set(
+    camera.position.x,
+    getTerrainHeight(camera.position.x, camera.position.z),
+    camera.position.z
   );
 
   const sunHeight = sunLight.position.y;
