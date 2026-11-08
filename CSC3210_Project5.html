@@ -335,6 +335,7 @@ let moveRight = false;
 
 const mouseSensitivity = 0.002;
 const movementSpeed = 10;
+const playerRadius = 0.5;
 
 const terrainLimit = terrainSize / 2 - 1;
 
@@ -679,8 +680,44 @@ function animate() {
       movementZ /= movementLength;
     }
 
-    camera.position.x += movementX * movementAmount;
-    camera.position.z += movementZ * movementAmount;
+    const nextX = camera.position.x + movementX * movementAmount;
+    const nextZ = camera.position.z + movementZ * movementAmount;
+
+    let collisionX = false;
+
+    for (const tree of treeList) {
+      const dxX = nextX - tree.x;
+      const dzX = camera.position.z - tree.z;
+
+      const distanceX = Math.sqrt(dxX * dxX + dzX * dzX);
+
+      if (distanceX < playerRadius + tree.radius) {
+        collisionX = true;
+        break;
+      }
+    }
+
+    if (!collisionX) {
+      camera.position.x = nextX;
+    }
+
+    let collisionZ = false;
+
+    for (const tree of treeList) {
+      const dxZ = camera.position.x - tree.x;
+      const dzZ = nextZ - tree.z;
+
+      const distanceZ = Math.sqrt(dxZ * dxZ + dzZ * dzZ);
+
+      if (distanceZ < playerRadius + tree.radius) {
+        collisionZ = true;
+        break;
+      }
+    }
+
+    if (!collisionZ) {
+      camera.position.z = nextZ;
+    }
 
     camera.position.x = THREE.MathUtils.clamp(
       camera.position.x,
