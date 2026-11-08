@@ -122,6 +122,11 @@ const moonLight = new THREE.DirectionalLight(0xb7c9ff, 0.35);
 scene.add(moonLight.target);
 scene.add(moonLight);
 
+const flashLight = new THREE.SpotLight(0xffffff, 1.35);
+flashLight.visible = false;
+scene.add(flashLight);
+scene.add(flashLight.target);
+
 const twilightSkyColor = new THREE.Color(0xd97a5f);
 const nightSkyColor = new THREE.Color(0x0b1026);
 const daySkyColor = new THREE.Color(0x87ceeb);
@@ -641,6 +646,10 @@ document.addEventListener("keydown", function(event) {
   if (event.code === "KeyD") {
     moveRight = true;
   }
+
+  if (event.code === "KeyF" && !event.repeat) {
+    flashLight.visible = !flashLight.visible;
+  }
 });
 
 document.addEventListener("keyup", function(event) {
@@ -830,6 +839,18 @@ function animate() {
     camera.position.y = 
       getTerrainHeight(camera.position.x, camera.position.z) + playerEyeHeight;
   }
+
+  flashLight.position.set(
+    camera.position.x,
+    camera.position.y,
+    camera.position.z
+  );
+  
+  const flashDirection = new THREE.Vector3();
+  camera.getWorldDirection(flashDirection);
+
+  flashLight.target.position.copy(camera.position).add(flashDirection);
+
   // for each tree, if its shrinking, gradually shrink it
   for (const tree of treeList) {
     if (tree.shrinking) {
