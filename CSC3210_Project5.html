@@ -125,6 +125,8 @@ scene.add(moonLight);
 const flashLight = new THREE.SpotLight(0xffffff, 1.35);
 flashLight.visible = false;
 flashLight.distance = 40;
+flashLight.angle = Math.PI / 6;
+flashLight.penumbra = 0.3;
 
 scene.add(flashLight);
 scene.add(flashLight.target);
