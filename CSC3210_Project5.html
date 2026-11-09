@@ -124,6 +124,8 @@ scene.add(moonLight);
 
 const flashLight = new THREE.SpotLight(0xffffff, 1.35);
 flashLight.visible = false;
+flashLight.distance = 25;
+
 scene.add(flashLight);
 scene.add(flashLight.target);
 
@@ -647,7 +649,7 @@ document.addEventListener("keydown", function(event) {
     moveRight = true;
   }
 
-  if (event.code === "KeyF" && !event.repeat) {
+  if (event.code === "KeyF" && !event.repeat && document.pointerLockElement === renderer.domElement) {
     flashLight.visible = !flashLight.visible;
   }
 });
