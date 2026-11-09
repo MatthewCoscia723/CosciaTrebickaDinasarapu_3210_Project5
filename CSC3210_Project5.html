@@ -125,6 +125,8 @@ scene.add(moonLight);
 const flashLight = new THREE.SpotLight(0xffffff, 1.35);
 flashLight.visible = false;
 flashLight.distance = 40;
+flashLight.angle = Math.PI / 6;
+flashLight.penumbra = 0.3;
 
 scene.add(flashLight);
 scene.add(flashLight.target);
@@ -689,17 +691,17 @@ function animate() {
   orbitAngle += orbitSpeed * deltaTime;
 
   sunLight.position.set(
-    camera.position.x + Math.cos(orbitAngle) * orbitRadius,
+    Math.cos(orbitAngle) * orbitRadius,
     Math.sin(orbitAngle) * orbitRadius,
-    camera.position.z
+    0
   );
 
   const moonAngle = orbitAngle + Math.PI; // Moon is opposite the sun
 
   moonLight.position.set(
-    camera.position.x + Math.cos(moonAngle) * orbitRadius,
+    Math.cos(moonAngle) * orbitRadius,
     Math.sin(moonAngle) * orbitRadius,
-    camera.position.z
+    0
   );
 
   // Move the sun and moon targets to follow the player
