@@ -124,7 +124,7 @@ scene.add(moonLight);
 
 const flashLight = new THREE.SpotLight(0xffffff, 1.35);
 flashLight.visible = false;
-flashLight.distance = 25;
+flashLight.distance = 40;
 
 scene.add(flashLight);
 scene.add(flashLight.target);
@@ -179,6 +179,9 @@ let isDigging = false;
 
 // Clock that measures the time between frames
 const clock = new THREE.Clock();
+
+// Reused vector that stores the flashlight's viewing direction
+const flashLightDirection = new THREE.Vector3();
 
 let orbitAngle = 0;
 const orbitSpeed = THREE.MathUtils.degToRad(1.5);
@@ -392,7 +395,7 @@ for (let i = 0; i < 100; i++) {
   const instructions = LSystem("F", tree1Rules, 2);
   const tree = createTree(instructions, 1.75, Math.PI / 6);
 
-  // x and y coordinates to spawn them in
+  // x and z coordinates to spawn them in
   const x = Math.random() * 180 - 90;
   const z = Math.random() * 180 - 90;
 
@@ -417,7 +420,7 @@ for (let i = 0; i < 100; i++) {
   treeList.push({mesh: tree, x: x, z: z, radius: 1, shrunk: false, shrinking: false, shrinkTime: 0});
 }
 
-// Spawn 100 (same backbone as above)
+// Spawn 100 of tree3 (same backbone as above)
 for (let i = 0; i < 100; i++) {
   const instructions = LSystem("F", tree3Rules, 2);
   const tree = createTree(instructions, 1.75, Math.PI / 4);
@@ -459,7 +462,7 @@ function updateRaycaster() {
 
   let hitTree = null;
 
-  // check if rays hit something in a group. searches through all trees and checks if the ray hits the tree
+  // Checks whether the ray hit a tree by searching through all tree groups
   if (currentHit && currentHit.object.parent) {
     for (const tree of treeList) {
       if (tree.mesh === currentHit.object.parent) {
@@ -484,7 +487,7 @@ function updateRaycaster() {
 
     highlightedTree = hitTree;
 
-    // If its a highlighted tree, update color and material
+    // If it's a highlighted tree, update color and material
     if (highlightedTree) {
       for (const branch of highlightedTree.children) {
         if (branch.userData.isBranch) {
@@ -848,10 +851,9 @@ function animate() {
     camera.position.z
   );
   
-  const flashDirection = new THREE.Vector3();
-  camera.getWorldDirection(flashDirection);
+  camera.getWorldDirection(flashLightDirection);
 
-  flashLight.target.position.copy(camera.position).add(flashDirection);
+  flashLight.target.position.copy(camera.position).add(flashLightDirection);
 
   // for each tree, if its shrinking, gradually shrink it
   for (const tree of treeList) {
