@@ -102,6 +102,13 @@ const digRadius = highlightRadius;
 const digSpeed = 2;
 
 const sunLight = new THREE.DirectionalLight(0xffe8b0, 1.0);
+
+const sun = new THREE.Mesh(
+  new THREE.SphereGeometry(5, 24, 24),
+  new THREE.MeshBasicMaterial({color: 0xffdd55})
+);
+scene.add(sun);
+
 sunLight.castShadow = true;
 
 sunLight.shadow.mapSize.width = 2048;
@@ -117,6 +124,12 @@ sunLight.shadow.camera.far = 250;
 
 scene.add(sunLight.target);
 scene.add(sunLight);
+
+const moon = new THREE.Mesh(
+  new THREE.SphereGeometry(3, 24, 24),
+  new THREE.MeshBasicMaterial({color: 0xb7c9ff})
+);
+scene.add(moon);
 
 const moonLight = new THREE.DirectionalLight(0xb7c9ff, 0.35);
 scene.add(moonLight.target);
@@ -374,6 +387,8 @@ let moveBackward = false;
 let moveLeft = false;
 let moveRight = false;
 
+let walkAnimationTime = 0;
+
 const mouseSensitivity = 0.002;
 const movementSpeed = 10;
 const playerRadius = 0.5;
@@ -383,6 +398,112 @@ const terrainLimit = terrainSize / 2 - 1;
 const groundHeight = getTerrainHeight(startX, startZ);
 
 camera.position.set(startX, groundHeight + playerEyeHeight, startZ);
+
+// Group that holds all invisible player body parts used for casting the player's shadow
+const playerShadow = new THREE.Group();
+
+playerShadow.position.set(startX, groundHeight, startZ);
+
+scene.add(playerShadow);
+
+const playerBody = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.25, 0.32, 0.85, 8),
+  new THREE.MeshStandardMaterial({color: 0xff0000})
+);
+
+playerBody.castShadow = true;
+playerBody.material.colorWrite = false;
+playerBody.material.depthWrite = false;
+playerShadow.add(playerBody);
+
+playerBody.position.set(0, 1.2, 0);
+
+const playerHead = new THREE.Mesh(
+  new THREE.SphereGeometry(0.25, 8, 8),
+  new THREE.MeshStandardMaterial({color: 0xff0000})
+);
+
+playerHead.castShadow = true;
+playerHead.material.colorWrite = false;
+playerHead.material.depthWrite = false;
+playerShadow.add(playerHead);
+
+playerHead.position.set(
+  0,
+  1.65,
+  0
+);
+
+const playerLeftLeg = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.10, 0.12, 0.8, 6),
+  new THREE.MeshStandardMaterial({color: 0xff0000})
+);
+
+playerLeftLeg.castShadow = true;
+playerLeftLeg.material.colorWrite = false;
+playerLeftLeg.material.depthWrite = false;
+playerShadow.add(playerLeftLeg);
+
+playerLeftLeg.position.set(
+  -0.18,
+  0.4,
+  0
+);
+
+playerLeftLeg.rotation.z = 0.06;
+
+const playerRightLeg = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.10, 0.12, 0.8, 6),
+  new THREE.MeshStandardMaterial({color: 0xff0000})
+);
+
+playerRightLeg.castShadow = true;
+playerRightLeg.material.colorWrite = false;
+playerRightLeg.material.depthWrite = false;
+playerShadow.add(playerRightLeg);
+
+playerRightLeg.position.set(
+  0.18,
+  0.4,
+  0
+);
+
+playerRightLeg.rotation.z = -0.06;
+
+const playerLeftArm = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.08, 0.10, 0.6, 6),
+  new THREE.MeshStandardMaterial({color: 0xff0000})
+);
+
+playerLeftArm.castShadow = true;
+playerLeftArm.material.colorWrite = false;
+playerLeftArm.material.depthWrite = false;
+playerShadow.add(playerLeftArm);
+
+playerLeftArm.position.set(
+  -0.34,
+  1.08,
+  0
+);
+playerLeftArm.rotation.z = -0.22;
+
+const playerRightArm = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.08, 0.10, 0.6, 6),
+  new THREE.MeshStandardMaterial({color: 0xff0000})
+);
+
+playerRightArm.castShadow = true;
+playerRightArm.material.colorWrite = false;
+playerRightArm.material.depthWrite = false;
+playerShadow.add(playerRightArm);
+
+playerRightArm.position.set(
+  0.34,
+  1.08,
+  0
+);
+
+playerRightArm.rotation.z = 0.22;
 
 // Tree Grammars
 // Tree 1: deterministic (same each time)
@@ -691,18 +812,22 @@ function animate() {
   orbitAngle += orbitSpeed * deltaTime;
 
   sunLight.position.set(
-    Math.cos(orbitAngle) * orbitRadius,
+    camera.position.x + Math.cos(orbitAngle) * orbitRadius,
     Math.sin(orbitAngle) * orbitRadius,
-    0
+    camera.position.z
   );
+
+  sun.position.copy(sunLight.position);
 
   const moonAngle = orbitAngle + Math.PI; // Moon is opposite the sun
 
   moonLight.position.set(
-    Math.cos(moonAngle) * orbitRadius,
+    camera.position.x + Math.cos(moonAngle) * orbitRadius,
     Math.sin(moonAngle) * orbitRadius,
-    0
+    camera.position.z
   );
+
+  moon.position.copy(moonLight.position);
 
   // Move the sun and moon targets to follow the player
   sunLight.target.position.set(
@@ -766,6 +891,9 @@ function animate() {
 
   let movementX = 0;
   let movementZ = 0;
+
+  const previousX = camera.position.x;
+  const previousZ = camera.position.z;
 
   if (document.pointerLockElement === renderer.domElement) {
     if (moveForward) {
@@ -845,6 +973,47 @@ function animate() {
 
     camera.position.y = 
       getTerrainHeight(camera.position.x, camera.position.z) + playerEyeHeight;
+  }
+
+  const playerActuallyMoved =
+    camera.position.x !== previousX ||
+    camera.position.z !== previousZ;
+
+  // Keeps the invisible player shadow model underneath the first-person camera
+  const playerGroundHeight =
+    getTerrainHeight(camera.position.x, camera.position.z);
+
+  const shadowOffset = 0.18;
+
+  playerShadow.position.set(
+    camera.position.x + Math.sin(yaw) * shadowOffset,
+    playerGroundHeight,
+    camera.position.z + Math.cos(yaw) * shadowOffset
+  );
+
+  // Rotates the player's shadow model in the same direction the player is facing.
+  playerShadow.rotation.y = yaw;
+
+  if (playerActuallyMoved) {
+    walkAnimationTime += deltaTime * 8;
+  }
+
+  const walkSwing = Math.sin(walkAnimationTime) * 0.4;
+
+  if (playerActuallyMoved) {
+    // Legs swing opposite each other
+    playerLeftLeg.rotation.x = walkSwing;
+    playerRightLeg.rotation.x = -walkSwing;
+
+    // Arms swing opposite the legs
+    playerLeftArm.rotation.x = -walkSwing * 0.9;
+    playerRightArm.rotation.x = walkSwing * 0.9;
+  } else {
+    // Return limbs to a neutral position when standing still
+    playerLeftLeg.rotation.x = 0;
+    playerRightLeg.rotation.x = 0;
+    playerLeftArm.rotation.x = 0;
+    playerRightArm.rotation.x = 0;
   }
 
   flashLight.position.set(
