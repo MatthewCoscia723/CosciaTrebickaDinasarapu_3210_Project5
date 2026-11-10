@@ -373,6 +373,7 @@ function createTerrain() {
 // Terrain mesh that the player walks on
 const terrain = createTerrain();
 scene.add(terrain);
+const terrainCenterY = getTerrainHeight(0, 0);
 
 const playerEyeHeight = 2;
 
@@ -816,9 +817,9 @@ function animate() {
   orbitAngle += orbitSpeed * deltaTime;
 
   sunLight.position.set(
-    camera.position.x + Math.cos(orbitAngle) * orbitRadius,
-    Math.sin(orbitAngle) * orbitRadius,
-    camera.position.z
+    Math.cos(orbitAngle) * orbitRadius,
+    terrainCenterY + Math.sin(orbitAngle) * orbitRadius,
+    0
   );
 
   sun.position.copy(sunLight.position);
@@ -826,19 +827,16 @@ function animate() {
   const moonAngle = orbitAngle + Math.PI; // Moon is opposite the sun
 
   moonLight.position.set(
-    camera.position.x + Math.cos(moonAngle) * orbitRadius,
-    Math.sin(moonAngle) * orbitRadius,
-    camera.position.z
+    Math.cos(moonAngle) * orbitRadius,
+    terrainCenterY + Math.sin(moonAngle) * orbitRadius,
+    0
   );
 
   moon.position.copy(moonLight.position);
 
   // Move the sun and moon targets to follow the player
-  sunLight.target.position.set(
-    camera.position.x,
-    getTerrainHeight(camera.position.x, camera.position.z),
-    camera.position.z
-  );
+  sunLight.target.position.set(0, terrainCenterY, 0);
+  moonLight.target.position.set(0, terrainCenterY, 0);
 
   moonLight.target.position.set(
     camera.position.x,
@@ -846,7 +844,7 @@ function animate() {
     camera.position.z
   );
 
-  const sunHeight = sunLight.position.y;
+  const sunHeight = sunLight.position.y - terrainCenterY;
 
   if (sunHeight > 0) {
     moonLight.intensity = 0;
