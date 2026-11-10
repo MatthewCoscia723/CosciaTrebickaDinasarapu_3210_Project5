@@ -812,9 +812,9 @@ function animate() {
   orbitAngle += orbitSpeed * deltaTime;
 
   sunLight.position.set(
-    camera.position.x + Math.cos(orbitAngle) * orbitRadius,
+    Math.cos(orbitAngle) * orbitRadius,
     Math.sin(orbitAngle) * orbitRadius,
-    camera.position.z
+    0
   );
 
   sun.position.copy(sunLight.position);
@@ -822,9 +822,9 @@ function animate() {
   const moonAngle = orbitAngle + Math.PI; // Moon is opposite the sun
 
   moonLight.position.set(
-    camera.position.x + Math.cos(moonAngle) * orbitRadius,
+    Math.cos(moonAngle) * orbitRadius,
     Math.sin(moonAngle) * orbitRadius,
-    camera.position.z
+    0
   );
 
   moon.position.copy(moonLight.position);
