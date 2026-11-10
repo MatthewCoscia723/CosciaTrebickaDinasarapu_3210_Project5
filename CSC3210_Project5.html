@@ -1092,7 +1092,7 @@ function animate() {
 
   // Update the camera's pitch with head bobbing if the player has moved
   if (playerActuallyMoved) {
-    camera.rotation.x = pitch + Math.sin(headBobTime) * 0.05;
+    camera.rotation.x = pitch + Math.sin(headBobTime) * 0.15;
   } else {
     camera.rotation.x = pitch;
   }
