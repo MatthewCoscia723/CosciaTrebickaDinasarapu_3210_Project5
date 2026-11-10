@@ -101,49 +101,61 @@ const digRadius = highlightRadius;
 // IMPORTANT: How fast the center of the hole gets deeper while the mouse is held, in units per second
 const digSpeed = 2;
 
+// Sun light setup using a directional light to simulate sunlight
 const sunLight = new THREE.DirectionalLight(0xffe8b0, 1.0);
 
+// Sun mesh setup
 const sun = new THREE.Mesh(
   new THREE.SphereGeometry(5, 24, 24),
   new THREE.MeshBasicMaterial({color: 0xffdd55})
 );
 scene.add(sun);
 
+// Cast shadows from the sun light
 sunLight.castShadow = true;
 
+// Shadow map size for the sun light
 sunLight.shadow.mapSize.width = 2048;
 sunLight.shadow.mapSize.height = 2048;
 
+// Shadow camera frustum for the sun light
 sunLight.shadow.camera.left = -25;
 sunLight.shadow.camera.right = 25;
 sunLight.shadow.camera.top = 25;
 sunLight.shadow.camera.bottom = -25;
 
+// Shadow camera near and far planes for the sun light
 sunLight.shadow.camera.near = 1;
 sunLight.shadow.camera.far = 250;
 
+// Add the sun light and its target to the scene
 scene.add(sunLight.target);
 scene.add(sunLight);
 
+// Moon setup using a sphere mesh to represent the moon
 const moon = new THREE.Mesh(
   new THREE.SphereGeometry(3, 24, 24),
   new THREE.MeshBasicMaterial({color: 0xb7c9ff})
 );
 scene.add(moon);
 
+// Moon light setup using a directional light to simulate moonlight
 const moonLight = new THREE.DirectionalLight(0xb7c9ff, 0.35);
 scene.add(moonLight.target);
 scene.add(moonLight);
 
+// Flashlight setup using a spotlight to simulate a flashlight
 const flashLight = new THREE.SpotLight(0xffffff, 1.35);
 flashLight.visible = false;
 flashLight.distance = 40;
 flashLight.angle = Math.PI / 6;
 flashLight.penumbra = 0.3;
 
+// Adds the flashlight and its target to the scene
 scene.add(flashLight);
 scene.add(flashLight.target);
 
+// Set up the sky colors for different times of the day
 const twilightSkyColor = new THREE.Color(0xd97a5f);
 const nightSkyColor = new THREE.Color(0x0b1026);
 const daySkyColor = new THREE.Color(0x87ceeb);
@@ -198,6 +210,7 @@ const clock = new THREE.Clock();
 // Reused vector that stores the flashlight's viewing direction
 const flashLightDirection = new THREE.Vector3();
 
+// Controls the sun and moon orbit around the terrain
 let orbitAngle = 0;
 const orbitSpeed = THREE.MathUtils.degToRad(1.5);
 const orbitRadius = 120;
@@ -375,136 +388,174 @@ const terrain = createTerrain();
 scene.add(terrain);
 const terrainCenterY = getTerrainHeight(0, 0);
 
+// Player eye height above the ground
 const playerEyeHeight = 2;
 
+// Starting position of the player on the terrain
 const startX = 0;
 const startZ = 0;
 
+// Player camera orientation
 let yaw = 0;
 let pitch = 0;
 
+// Player movement flags
 let moveForward = false;
 let moveBackward = false;
 let moveLeft = false;
 let moveRight = false;
 
+// Animation timing for the player's walk and head bob
 let walkAnimationTime = 0;
 let headBobTime = 0;
 
+// Mouse sensitivity for camera control
 const mouseSensitivity = 0.002;
+
+// Player movement speed
 const movementSpeed = 10;
+
+// Player collision radius
 const playerRadius = 0.5;
 
+// Terrain boundary limit for the player
 const terrainLimit = terrainSize / 2 - 1;
 
+// Initial ground height at the player's starting position
 const groundHeight = getTerrainHeight(startX, startZ);
 
+// Set the camera position to the player's starting location, slightly above the ground
 camera.position.set(startX, groundHeight + playerEyeHeight, startZ);
 
 // Group that holds all invisible player body parts used for casting the player's shadow
 const playerShadow = new THREE.Group();
 
+// Position the player shadow group at the player's starting location
 playerShadow.position.set(startX, groundHeight, startZ);
 
+// Adds the player's shadow to the scene.
 scene.add(playerShadow);
 
+// Player body mesh (torso)
 const playerBody = new THREE.Mesh(
   new THREE.CylinderGeometry(0.25, 0.32, 0.85, 8),
   new THREE.MeshStandardMaterial({color: 0xff0000})
 );
 
+// Configure the player body mesh for shadow casting and rendering
 playerBody.castShadow = true;
 playerBody.material.colorWrite = false;
 playerBody.material.depthWrite = false;
 playerShadow.add(playerBody);
 
+// Sets the player's body position relative to the player shadow group
 playerBody.position.set(0, 1.2, 0);
 
+// Player head mesh
 const playerHead = new THREE.Mesh(
   new THREE.SphereGeometry(0.25, 8, 8),
   new THREE.MeshStandardMaterial({color: 0xff0000})
 );
 
+// Configure the player head mesh for shadow casting and rendering
 playerHead.castShadow = true;
 playerHead.material.colorWrite = false;
 playerHead.material.depthWrite = false;
 playerShadow.add(playerHead);
 
+// Sets the player's head position relative to the player shadow group
 playerHead.position.set(
   0,
   1.65,
   0
 );
 
+// Player left leg mesh
 const playerLeftLeg = new THREE.Mesh(
   new THREE.CylinderGeometry(0.10, 0.12, 0.8, 6),
   new THREE.MeshStandardMaterial({color: 0xff0000})
 );
 
+// Configure the player left leg mesh for shadow casting and rendering
 playerLeftLeg.castShadow = true;
 playerLeftLeg.material.colorWrite = false;
 playerLeftLeg.material.depthWrite = false;
 playerShadow.add(playerLeftLeg);
 
+// Sets the player's left leg position relative to the player shadow group
 playerLeftLeg.position.set(
   -0.18,
   0.4,
   0
 );
 
+// Sets the player's left leg rotation relative to the player shadow group
 playerLeftLeg.rotation.z = 0.06;
 
+// Player right leg mesh
 const playerRightLeg = new THREE.Mesh(
   new THREE.CylinderGeometry(0.10, 0.12, 0.8, 6),
   new THREE.MeshStandardMaterial({color: 0xff0000})
 );
 
+// Configure the player right leg mesh for shadow casting and rendering
 playerRightLeg.castShadow = true;
 playerRightLeg.material.colorWrite = false;
 playerRightLeg.material.depthWrite = false;
 playerShadow.add(playerRightLeg);
 
+// Sets the player's right leg position relative to the player shadow group
 playerRightLeg.position.set(
   0.18,
   0.4,
   0
 );
 
+// Sets the player's right leg rotation relative to the player shadow group
 playerRightLeg.rotation.z = -0.06;
 
+// Player left arm mesh
 const playerLeftArm = new THREE.Mesh(
   new THREE.CylinderGeometry(0.08, 0.10, 0.6, 6),
   new THREE.MeshStandardMaterial({color: 0xff0000})
 );
 
+// Configure the player left arm mesh for shadow casting and rendering
 playerLeftArm.castShadow = true;
 playerLeftArm.material.colorWrite = false;
 playerLeftArm.material.depthWrite = false;
 playerShadow.add(playerLeftArm);
 
+// Sets the player's left arm position relative to the player shadow group
 playerLeftArm.position.set(
   -0.34,
   1.08,
   0
 );
+
+// Sets the player's left arm rotation relative to the player shadow group
 playerLeftArm.rotation.z = -0.22;
 
+// Player right arm mesh
 const playerRightArm = new THREE.Mesh(
   new THREE.CylinderGeometry(0.08, 0.10, 0.6, 6),
   new THREE.MeshStandardMaterial({color: 0xff0000})
 );
 
+// Configure the player right arm mesh for shadow casting and rendering
 playerRightArm.castShadow = true;
 playerRightArm.material.colorWrite = false;
 playerRightArm.material.depthWrite = false;
 playerShadow.add(playerRightArm);
 
+// Sets the player's right arm position relative to the player shadow group
 playerRightArm.position.set(
   0.34,
   1.08,
   0
 );
 
+// Sets the player's right arm rotation relative to the player shadow group
 playerRightArm.rotation.z = 0.22;
 
 // Tree Grammars
@@ -753,6 +804,7 @@ renderer.domElement.addEventListener("click", function() {
   renderer.domElement.requestPointerLock();
 });
 
+// Listener that updates the camera orientation based on mouse movement when the pointer is locked
 document.addEventListener("mousemove", function(event) {
   if (document.pointerLockElement === renderer.domElement) {
     yaw -= event.movementX * mouseSensitivity;
@@ -766,6 +818,7 @@ document.addEventListener("mousemove", function(event) {
   }
 });
 
+// Listener that handles key presses depending on the player movement
 document.addEventListener("keydown", function(event) {
   if (event.code === "KeyW") {
     moveForward = true;
@@ -780,11 +833,14 @@ document.addEventListener("keydown", function(event) {
     moveRight = true;
   }
 
+  // Toggles the flashlight on and off when the 'F' key is pressed (prevents from repeatedly triggering while holding the key down)
+  // Only works when the pointer is locked to the game canvas
   if (event.code === "KeyF" && !event.repeat && document.pointerLockElement === renderer.domElement) {
     flashLight.visible = !flashLight.visible;
   }
 });
 
+// Listener that handles key releases depending on the player movement
 document.addEventListener("keyup", function(event) {
   if (event.code === "KeyW") {
     moveForward = false;
@@ -807,23 +863,28 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// Listener that handles window resize events to update the renderer and camera
 window.addEventListener("resize", onWindowResize);
 
 // Function that runs once per frame to update and draw the scene
 function animate() {
   requestAnimationFrame(animate); // Schedules the next frame
   
-  const deltaTime = clock.getDelta(); // Time elapsed since the last frame in seconds
+  // Update the orbit angle for the sun and moon based on the elapsed time
+  const deltaTime = clock.getDelta();
   orbitAngle += orbitSpeed * deltaTime;
 
+  // Update the position of the sun based on the orbit angle
   sunLight.position.set(
     Math.cos(orbitAngle) * orbitRadius,
     terrainCenterY + Math.sin(orbitAngle) * orbitRadius,
     0
   );
 
+  // Copies the sunlight's position to the sun object's position
   sun.position.copy(sunLight.position);
 
+  // Update the position of the moon based on the orbit angle (opposite the sun)
   const moonAngle = orbitAngle + Math.PI; // Moon is opposite the sun
 
   moonLight.position.set(
@@ -832,26 +893,31 @@ function animate() {
     0
   );
 
+  // Copies the moonlight's position to the moon object's position
   moon.position.copy(moonLight.position);
 
-  // Move the sun and moon targets to follow the player
+  // Set the sun and moon light targets to the center of the terrain
   sunLight.target.position.set(0, terrainCenterY, 0);
   moonLight.target.position.set(0, terrainCenterY, 0);
 
+  // Update the moonlight target to follow the camera
   moonLight.target.position.set(
     camera.position.x,
     getTerrainHeight(camera.position.x, camera.position.z),
     camera.position.z
   );
 
+  // Calculate the height of the sun above the terrain to determine lighting conditions
   const sunHeight = sunLight.position.y - terrainCenterY;
 
+  // Update the lighting and background based on the sun's height above the terrain
   if (sunHeight > 0) {
     moonLight.intensity = 0;
 
     if (sunHeight < 25) {
       const colorBlend = sunHeight / 25;
 
+      // Adjust the sun light intensity based on how close the sun is to the horizon
       sunLight.intensity = colorBlend;
 
       if (colorBlend < 0.5) {
@@ -876,8 +942,10 @@ function animate() {
   } else {
     scene.background.set(0x0b1026); // Set the background to a dark night color
 
+    // IMPORTANT: When the sun is below the horizon, the sun light intensity is set to 0 to simulate night.
     sunLight.intensity = 0;
 
+    // Calculate the moon's intensity based on how far below the horizon the sun is
     const moonBlend = THREE.MathUtils.clamp((-sunHeight) / 25, 0, 1);
     moonLight.intensity = 0.40 * moonBlend;
   }
@@ -885,18 +953,23 @@ function animate() {
   // Calculates the distance the player moves this frame
   const movementAmount = movementSpeed * deltaTime;
 
+  // Calculate the forward vector based on the player's yaw angle
   const forwardX = -Math.sin(yaw);
   const forwardZ = -Math.cos(yaw);
 
+  // Calculate the right vector based on the player's yaw angle
   const rightX = Math.cos(yaw);
   const rightZ = -Math.sin(yaw);
 
+  // Initialize the movement variables for the current frame
   let movementX = 0;
   let movementZ = 0;
 
+  // Store the previous camera position for collision detection
   const previousX = camera.position.x;
   const previousZ = camera.position.z;
 
+  // Handle player movement and collision detection (only when the pointer is locked to the game canvas)
   if (document.pointerLockElement === renderer.domElement) {
     if (moveForward) {
       movementX += forwardX;
@@ -915,18 +988,23 @@ function animate() {
       movementZ += rightZ;
     }
 
+    // Normalize the movement vector to ensure consistent speed regardless of direction
     const movementLength = Math.sqrt(movementX * movementX + movementZ * movementZ);
 
+    // Only normalize the movement vector if there is actual movement to avoid division by zero
     if (movementLength > 0) {
       movementX /= movementLength;
       movementZ /= movementLength;
     }
 
+    // Calculate the next position based on the normalized movement vector
     const nextX = camera.position.x + movementX * movementAmount;
     const nextZ = camera.position.z + movementZ * movementAmount;
 
+    // Check for collision in the X direction
     let collisionX = false;
 
+    // Check for collision with trees in the X direction
     for (const tree of treeList) {
       const dxX = nextX - tree.x;
       const dzX = camera.position.z - tree.z;
@@ -943,40 +1021,48 @@ function animate() {
       camera.position.x = nextX;
     }
 
+    // Check for collision in the Z direction
     let collisionZ = false;
 
+    // Check for collision with trees in the Z direction
     for (const tree of treeList) {
       const dxZ = camera.position.x - tree.x;
       const dzZ = nextZ - tree.z;
 
       const distanceZ = Math.sqrt(dxZ * dxZ + dzZ * dzZ);
 
+      // Check if the distance between the player and the tree is less than the sum of their radii
       if (distanceZ < playerRadius + tree.radius) {
         collisionZ = true;
         break;
       }
     }
 
+    // Update the camera's Z position if there is no collision in the Z direction
     if (!collisionZ) {
       camera.position.z = nextZ;
     }
 
+    // Clamp the camera's X position to stay within the terrain limits
     camera.position.x = THREE.MathUtils.clamp(
       camera.position.x,
       -terrainLimit,
       terrainLimit
     );
 
+    // Clamp the camera's Z position to stay within the terrain limits
     camera.position.z = THREE.MathUtils.clamp(
       camera.position.z,
       -terrainLimit,
       terrainLimit
     );
 
+    // Update the camera's vertical position to follow the terrain
     camera.position.y = 
       getTerrainHeight(camera.position.x, camera.position.z) + playerEyeHeight;
   }
 
+  // Determine if the player has actually moved this frame
   const playerActuallyMoved =
     camera.position.x !== previousX ||
     camera.position.z !== previousZ;
@@ -985,30 +1071,36 @@ function animate() {
   const playerGroundHeight =
     getTerrainHeight(camera.position.x, camera.position.z);
 
+  // Small offset used to position the player's shadow model relative to the camera and ground
   const shadowOffset = 0.18;
 
+  // Position the player's shadow model slightly above the ground
   playerShadow.position.set(
     camera.position.x + Math.sin(yaw) * shadowOffset,
-    playerGroundHeight,
+    playerGroundHeight + shadowOffset,
     camera.position.z + Math.cos(yaw) * shadowOffset
   );
 
   // Rotates the player's shadow model in the same direction the player is facing.
   playerShadow.rotation.y = yaw;
 
+  // Update the player's animation and camera based on movement
   if (playerActuallyMoved) {
     walkAnimationTime += deltaTime * 8;
     headBobTime += deltaTime * 2;
   }
 
+  // Update the camera's pitch with head bobbing if the player has moved
   if (playerActuallyMoved) {
     camera.rotation.x = pitch + Math.sin(headBobTime) * 0.05;
   } else {
     camera.rotation.x = pitch;
   }
 
+  // Calculate the swing for the player's limbs based on the walk animation time
   const walkSwing = Math.sin(walkAnimationTime) * 0.4;
 
+  // Update the player's limb animations based on whether the player has moved
   if (playerActuallyMoved) {
     // Legs swing opposite each other
     playerLeftLeg.rotation.x = walkSwing;
@@ -1025,17 +1117,20 @@ function animate() {
     playerRightArm.rotation.x = 0;
   }
 
+  // Position the flashlight at the camera's location and orient it in the direction the camera is facing
   flashLight.position.set(
     camera.position.x,
     camera.position.y,
     camera.position.z
   );
   
+  // Get the direction the camera is facing to orient the flashlight
   camera.getWorldDirection(flashLightDirection);
 
+  // Position the flashlight's target slightly ahead of the camera in the direction it is facing
   flashLight.target.position.copy(camera.position).add(flashLightDirection);
 
-  // for each tree, if its shrinking, gradually shrink it
+  // For each tree, if its shrinking, gradually shrink it
   for (const tree of treeList) {
     if (tree.shrinking) {
       tree.shrinkTime += deltaTime;
@@ -1045,6 +1140,7 @@ function animate() {
       let scale = 1.5 - (0.60 * shrinkProgress);
       tree.mesh.scale.set(scale, scale, scale);
 
+      // Check if the tree has finished shrinking
       if (shrinkProgress >= 1) {
         tree.shrinking = false;
       }
