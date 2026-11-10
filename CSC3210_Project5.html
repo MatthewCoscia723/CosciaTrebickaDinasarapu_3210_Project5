@@ -481,8 +481,8 @@ playerLeftArm.material.depthWrite = false;
 playerShadow.add(playerLeftArm);
 
 playerLeftArm.position.set(
-  -0.42,
-  1.05,
+  -0.34,
+  1.08,
   0
 );
 playerLeftArm.rotation.z = -0.22;
@@ -498,8 +498,8 @@ playerRightArm.material.depthWrite = false;
 playerShadow.add(playerRightArm);
 
 playerRightArm.position.set(
-  0.42,
-  1.05,
+  0.34,
+  1.08,
   0
 );
 
@@ -975,6 +975,10 @@ function animate() {
       getTerrainHeight(camera.position.x, camera.position.z) + playerEyeHeight;
   }
 
+  const playerActuallyMoved =
+    camera.position.x !== previousX ||
+    camera.position.z !== previousZ;
+
   // Keeps the invisible player shadow model underneath the first-person camera
   const playerGroundHeight =
     getTerrainHeight(camera.position.x, camera.position.z);
@@ -990,16 +994,20 @@ function animate() {
   // Rotates the player's shadow model in the same direction the player is facing.
   playerShadow.rotation.y = yaw;
 
-  const walkSwing = Math.sin(walkAnimationTime) * 0.22;
+  if (playerActuallyMoved) {
+    walkAnimationTime += deltaTime * 8;
+  }
 
-  if (movementX !== 0 || movementZ !== 0) {
+  const walkSwing = Math.sin(walkAnimationTime) * 0.4;
+
+  if (playerActuallyMoved) {
     // Legs swing opposite each other
     playerLeftLeg.rotation.x = walkSwing;
     playerRightLeg.rotation.x = -walkSwing;
 
     // Arms swing opposite the legs
-    playerLeftArm.rotation.x = -walkSwing * 0.7;
-    playerRightArm.rotation.x = walkSwing * 0.7;
+    playerLeftArm.rotation.x = -walkSwing * 0.9;
+    playerRightArm.rotation.x = walkSwing * 0.9;
   } else {
     // Return limbs to a neutral position when standing still
     playerLeftLeg.rotation.x = 0;
